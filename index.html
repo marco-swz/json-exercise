@@ -1,1 +1,123 @@
-<h1>hello</h1>
+<!doctype html>
+<html lang=en>
+
+<head>
+    <meta charset=utf-8>
+    <title>Weather Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.1/cdn/themes/light.css" />
+    <script type="module"
+        src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.1/cdn/shoelace-autoloader.js"></script>
+
+    <style>
+        body {
+            padding: 50px 20%;
+        }
+
+        #cont-token {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        #inp-token {
+            width: 350px;
+        }
+
+        #sel-type {
+            width: 350px;
+            margin-left: auto;
+        }
+
+        :not(:defined) {
+            visibility: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cont-token">
+        <sl-input id="inp-token" value="" placeholder="openweathermap.org API Token"
+            required></sl-input>
+        <sl-button onclick="handleClickGetData()" variant="primary">Get Data</sl-button>
+        <sl-select id="sel-type" value="temp">
+            <sl-option value="temp">Temperature</sl-option>
+            <sl-option value="pressure">Pressure</sl-option>
+            <sl-option value="humidity">Humidity</sl-option>
+        </sl-select>
+    </div>
+    <div id="chart"></div>
+    <sl-alert variant="danger" duration="3000" closable>
+        <strong>Your account has been deleted</strong><br />
+    </sl-alert>
+</body>
+
+<script>
+    const NAME_MAP = {
+        'temp': 'Temperature',
+        'pressure': 'Pressure',
+        'humidity': 'Humidity',
+    };
+    var gChart;
+    var gData;
+
+    function handleClickGetData() {
+        const $inpToken = document.querySelector('#inp-token');
+        if (!$inpToken.reportValidity()) {
+            return;
+        }
+
+        fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=47.3765&lon=15.0914&appid=${$inpToken.value}&units=metric`)
+            .then(x => x.json())
+            .then(x => {
+                if (x.cod != 200) {
+                    alert(x.message);
+                    return;
+                }
+
+                gData = {
+                    'temp': [],
+                    'pressure': [],
+                    'humidity': [],
+                };
+
+                for (const entry of x.list) {
+                    const t = entry.dt_txt;
+                    gData.temp.push({x: t, y: entry.main.temp});
+                    gData.humidity.push({x: t, y: entry.main.humidity});
+                    gData.pressure.push({x: t, y: entry.main.pressure});
+                }
+
+                handleChangeType();
+            });
+    }
+
+    function handleChangeType() {
+        if (gChart == null || gData == null) {
+            return;
+        }
+
+        const type = document.querySelector('#sel-type').value;
+        gChart.updateSeries([{
+            name: NAME_MAP[type],
+            data: gData[type],
+        }]);
+    }
+
+    var options = {
+        chart: {
+            type: 'line'
+        },
+        series: [
+        ],
+        xaxis: {
+            type: 'datetime',
+        }
+    };
+    gChart = new ApexCharts(document.querySelector("#chart"), options);
+    gChart.render();
+
+    document.querySelector('#sel-type').addEventListener('sl-change', handleChangeType);
+</script>
+
+</html>
